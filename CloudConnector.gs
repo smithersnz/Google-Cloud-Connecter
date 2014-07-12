@@ -328,6 +328,8 @@ function login() {
   
    var httpheaders = {SOAPAction: "login"};
    var parameters = {
+     //ds
+     
      method : "POST",
      contentType: "text/xml",
      headers: httpheaders,
@@ -344,6 +346,7 @@ function login() {
       Logger.log("EXCEPTION!!!");
       Logger.log(e);
       Browser.msgBox(e);
+      
     }
 }
 
@@ -723,7 +726,8 @@ function onOpen() {
   var menuEntries = [ {name: "Settings", functionName: "renderSettingsDialog"},
                      {name: "Login with Salesforce", functionName: "login"},
                      {name: "Pull the Records", functionName: "renderQueryDialog"},
-                     {name: "Push Records", functionName: "sendQueryMore"}
+                     {name: "Push Records", functionName: "sendQueryMore"},
+                     {name: "DSQuery", functionName: "runListOfQueries"}
                     ];
   ss.addMenu("Cloud Connector", menuEntries);
 }
@@ -813,6 +817,7 @@ function login() {
   
    var httpheaders = {SOAPAction: "login"};
    var parameters = {
+     
      method : "POST",
      contentType: "text/xml",
      headers: httpheaders,
@@ -851,9 +856,11 @@ function renderGridData(object, renderHeaders){
       if(j!="attributes"){
         values.push(object.records[i][j]);
       } else {
-        var id = object.records[i][j].url.substr(object.records[i][j].url.length-18,18);
-        //Logger.log(id);
-        sObjectAttributes[id] = object.records[i][j].type;
+        //ds
+        
+        //var id = object.records[i][j].url.substr(object.records[i][j].url.length-18,18);
+       
+        //sObjectAttributes[id] = object.records[i][j].type;
       }
     }
     data.push(values);
@@ -988,6 +995,114 @@ function fetch(url){
   } catch(e){
     Logger.log(e);
     Browser.msgBox(e);
+    
   }  
 
 }
+
+
+//DS - run list of queries, put into different sheets
+
+function runListOfQueries(){
+  var sheet 
+  var q
+  var s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Queries");
+  var last = s.getLastRow()
+  
+  for(var i=2;i<last+1;i++){
+  
+    if(s.getRange(i,2).getValue() !=""){
+      sheet=s.getRange(i,1).getValue();
+      q=s.getRange(i,2).getValue();
+    
+      sendSoqlQueryDS(sheet,q)}
+  
+  }
+  
+  
+  
+  
+  
+  
+}
+
+
+
+function sendSoqlQueryDS(sheet,q){
+  var ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheet);
+  ss.clear();
+
+  var results = query(encodeURIComponent(q));
+  
+  renderGridDataDS(processResults(results), true, ss);
+  
+  var app = UiApp.getActiveApplication();
+  app.close();
+  return app;
+}
+
+
+function renderGridDataDS(object, renderHeaders, sheet){
+  
+ 
+  var data = [];
+  var sObjectAttributes = {};
+  
+  //Need to always build headers for row length/rendering
+  var headers = buildHeaders(object.records);
+  
+  if(renderHeaders){  
+    data.push(headers);
+  }
+  
+  for (var i in object.records) {
+    var values = [];
+    for(var j in object.records[i]){
+      if(j!="attributes"){
+        values.push(object.records[i][j]);
+      } else {
+       //ds
+        
+       // var id = object.records[i][j].url.substr(object.records[i][j].url.length-18,18);
+        //Logger.log(id);
+        //sObjectAttributes[id] = object.records[i][j].type;
+      }
+    }
+    data.push(values);
+  }
+  
+  Logger.log(sheet.getLastRow());
+  var destinationRange = sheet.getRange(sheet.getLastRow()+1, 1, data.length, headers.length);
+  destinationRange.setValues(data);
+}
+
+
+function sendEmail() {
+  var s = SpreadsheetApp.getActive().getSheetByName('Data Sheet');
+  var to = 'example@example.com'
+  var data = s.getRange('A1:B24').getValues();
+  var body = '';
+  var subject = 'Daily invoice report'
+  for( var row in data ) {
+    for( var col in data[row] ) {
+      body += data[row][col] + '\t';
+    }
+    body += '\n';
+  }
+  MailApp.sendEmail(to, 'Subject', body);
+}
+
+
+
+
+function composeHtmlMsg(headers,values){
+  var message = 'Here are the data you submitted :<br><br><table style="background-color:lightblue;border-collapse:collapse;" border = 1 cellpadding = 5><tr>'
+  for(var c=0;c<values[0].length;++c){
+    message+='<tr><td>'+headers[0][c]+'</td><td>'+values[0][c]+'</td></tr>'
+  }
+  return message+'</table>';
+}
+
+
+
+
