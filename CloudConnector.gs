@@ -1019,8 +1019,9 @@ function runListOfQueries(){
   
   }
   
-  
-  
+  //set last run date
+  var s2 = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Data Sheet");
+  s2.getRange(1,5).setValue(new Date());
   
   
   
@@ -1072,8 +1073,13 @@ function renderGridDataDS(object, renderHeaders, sheet){
   }
   
   Logger.log(sheet.getLastRow());
+  
+  //ds if data blank it fails, check for data
+  if(data.length>1){
+    var check = data.length
   var destinationRange = sheet.getRange(sheet.getLastRow()+1, 1, data.length, headers.length);
-  destinationRange.setValues(data);
+    destinationRange.setValues(data);}
+  
 }
 
 
@@ -1089,18 +1095,51 @@ function sendEmail() {
     }
     body += '\n';
   }
-  MailApp.sendEmail(to, 'Subject', body);
+  //MailApp.sendEmail(to, 'Subject', body);
+  
+  MailApp.sendEmail({
+     to: "david.smith@localist.co.nz",
+     subject: "Daily invoice report",
+     htmlBody: buildHTMLTable()   
+   });
+  
 }
 
 
+function addCommas(nStr)
+{
+nStr += '';
+var x = nStr.split('.');
+var x1 = x[0];
+var x2 = x.length > 1 ? '.' + x[1] : '';
+var rgx = /(\d+)(\d{3})/;
+while (rgx.test(x1)) {
+x1 = x1.replace(rgx, '$1' + ',' + '$2');
+}
+return x1 + x2;
+}
 
 
-function composeHtmlMsg(headers,values){
-  var message = 'Here are the data you submitted :<br><br><table style="background-color:lightblue;border-collapse:collapse;" border = 1 cellpadding = 5><tr>'
-  for(var c=0;c<values[0].length;++c){
-    message+='<tr><td>'+headers[0][c]+'</td><td>'+values[0][c]+'</td></tr>'
+function buildHTMLTable(){
+  
+  var sheet = SpreadsheetApp.getActive().getSheetByName('Data Sheet');
+  var message =  'Here is the daily invoice report - Generated at '+sheet.getRange(1,5).getValue()+ ':<br><br><table style="border-collapse:collapse;" border = 0 ;paddingRight = "5px"><tr>'
+  var end = sheet.getLastRow()+1;
+  for (var i=1;i<end; i++){
+    if (i==14){message+='<tr><td width = 200>'+sheet.getRange(i,1).getValue()+'</td><td><u>'+addCommas(sheet.getRange(i,2).getValue())+'</u></td></tr>';}
+    else if(i==8 ||i==10||i==12||i==22){message+='<tr><td><b>'+sheet.getRange(i,1).getValue()+'</b></td><td>'+addCommas(sheet.getRange(i,2).getValue())+'</td></tr>';}
+    else if(i==1 ||i==5){message+='<tr><td><i><u>'+sheet.getRange(i,1).getValue()+'</u></i></td><td>'+addCommas(sheet.getRange(i,2).getValue())+'</td></tr>';}
+    else if(i==4 ||i==11||i==16||i==18||i==20){message+='<br>';}
+    else {message+='<tr><td>'+sheet.getRange(i,1).getValue()+'</td><td>'+addCommas(sheet.getRange(i,2).getValue())+'</td></tr>';}
+    
+    
+    
+    
+    
+    
   }
-  return message+'</table>';
+  return message+'</table>'
+  
 }
 
 
